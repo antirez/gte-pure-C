@@ -1,0 +1,14 @@
+# Model file (too large for git)
+*.gtemodel
+
+# Compiled binaries
+test_gte
+*.o
+*.a
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.pyc
+*.npy
