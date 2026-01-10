@@ -13,7 +13,4 @@ gte-small.gtemodel: offline/local_complete_model/model.safetensors
 clean:
 	rm -f test_gte bench
 
-distclean: clean
-	rm -f gte-small.gtemodel
-
 .PHONY: all clean
