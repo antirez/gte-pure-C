@@ -12,7 +12,9 @@ else
 	BLAS_LDFLAGS = -lblas
 endif
 
-all: generic
+all:
+	@echo "Usage: make generic   (pure C, no dependencies)"
+	@echo "       make blas      (BLAS-accelerated, faster)"
 
 # Generic (pure C) build
 generic: CFLAGS += -DUSE_GENERIC
