@@ -12,6 +12,14 @@
 #include <math.h>
 #include <ctype.h>
 
+#ifdef USE_BLAS
+#ifdef __APPLE__
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
+#endif
+
 /* ========================================================================
  * Constants
  * ======================================================================== */
@@ -151,6 +159,21 @@ static int vocab_lookup(vocab_entry *table, const char *word) {
  */
 static void linear(float *y, const float *x, const float *W, const float *b,
                    int seq_len, int in_dim, int out_dim) {
+#ifdef USE_BLAS
+    /* y = x @ W^T using BLAS sgemm */
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                seq_len, out_dim, in_dim,
+                1.0f, x, in_dim, W, in_dim,
+                0.0f, y, out_dim);
+    /* Add bias */
+    if (b) {
+        for (int s = 0; s < seq_len; s++) {
+            for (int o = 0; o < out_dim; o++) {
+                y[s * out_dim + o] += b[o];
+            }
+        }
+    }
+#else
     for (int s = 0; s < seq_len; s++) {
         for (int o = 0; o < out_dim; o++) {
             float sum = b ? b[o] : 0.0f;
@@ -160,6 +183,7 @@ static void linear(float *y, const float *x, const float *W, const float *b,
             y[s * out_dim + o] = sum;
         }
     }
+#endif
 }
 
 /* Layer normalization */
