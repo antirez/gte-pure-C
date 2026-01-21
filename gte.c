@@ -8,6 +8,7 @@
 #include "gte.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
@@ -115,8 +116,8 @@ struct gte_ctx {
  * ======================================================================== */
 
 /* FNV-1a hash for strings */
-static unsigned int hash_string(const char *str) {
-    unsigned int hash = 2166136261u;
+static uint32_t hash_string(const char *str) {
+    uint32_t hash = 2166136261u;
     while (*str) {
         hash ^= (unsigned char)*str++;
         hash *= 16777619u;
@@ -126,7 +127,7 @@ static unsigned int hash_string(const char *str) {
 
 /* Add word to vocabulary hash table */
 static void vocab_hash_insert(vocab_entry *table, const char *word, int id) {
-    unsigned int h = hash_string(word) % VOCAB_HASH_SIZE;
+    uint32_t h = hash_string(word) % VOCAB_HASH_SIZE;
     while (table[h].word != NULL) {
         if (strcmp(table[h].word, word) == 0) {
             return; /* Already exists */
@@ -139,7 +140,7 @@ static void vocab_hash_insert(vocab_entry *table, const char *word, int id) {
 
 /* Look up word in vocabulary, returns -1 if not found */
 static int vocab_lookup(vocab_entry *table, const char *word) {
-    unsigned int h = hash_string(word) % VOCAB_HASH_SIZE;
+    uint32_t h = hash_string(word) % VOCAB_HASH_SIZE;
     while (table[h].word != NULL) {
         if (strcmp(table[h].word, word) == 0) {
             return table[h].id;
