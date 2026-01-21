@@ -439,6 +439,39 @@ static void self_attention(gte_ctx *ctx, layer_weights *layer, int seq_len, cons
     /* Compute attention for each head */
     float scale = 1.0f / sqrtf((float)head_dim);
 
+#ifdef USE_BLAS
+    for (int h = 0; h < heads; h++) {
+        float *scores = &ctx->attn_scores[h * seq_len * seq_len];
+        float *Q_h = &ctx->q_proj[h * head_dim];
+        float *K_h = &ctx->k_proj[h * head_dim];
+        float *V_h = &ctx->v_proj[h * head_dim];
+        float *out_h = &ctx->attn_output[h * head_dim];
+
+        /* Q @ K^T with scaling: scores[seq,seq] = scale * Q[seq,head_dim] @ K[seq,head_dim]^T */
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                    seq_len, seq_len, head_dim,
+                    scale, Q_h, hidden, K_h, hidden,
+                    0.0f, scores, seq_len);
+
+        /* Apply attention mask and softmax */
+        for (int i = 0; i < seq_len; i++) {
+            if (attn_mask) {
+                for (int j = 0; j < seq_len; j++) {
+                    if (!attn_mask[j]) {
+                        scores[i * seq_len + j] = -10000.0f;
+                    }
+                }
+            }
+            softmax(&scores[i * seq_len], seq_len);
+        }
+
+        /* Attention @ V: out[seq,head_dim] = scores[seq,seq] @ V[seq,head_dim] */
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                    seq_len, head_dim, seq_len,
+                    1.0f, scores, seq_len, V_h, hidden,
+                    0.0f, out_h, hidden);
+    }
+#else
     for (int h = 0; h < heads; h++) {
         /* Attention scores for this head: Q @ K^T / sqrt(d_k) */
         for (int i = 0; i < seq_len; i++) {
@@ -476,6 +509,7 @@ static void self_attention(gte_ctx *ctx, layer_weights *layer, int seq_len, cons
             }
         }
     }
+#endif
 
     /* Output projection */
     linear(ctx->temp_hidden, ctx->attn_output, layer->attn_output_weight, layer->attn_output_bias,
